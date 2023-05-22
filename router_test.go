@@ -30,8 +30,8 @@ func TestRouter(t *testing.T) {
 				path:    "root",
 				handler: nil,
 				children: map[string]*node{
-					"/user": &node{
-						path:     "/user",
+					"user": &node{
+						path:     "user",
 						children: map[string]*node{},
 						handler:  mockHandler,
 					},
