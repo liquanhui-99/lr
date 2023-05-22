@@ -22,6 +22,7 @@ var _ Server = (*HTTPServer)(nil)
 
 // HTTPServer http server struct
 type HTTPServer struct {
+	router router
 }
 
 // ServeHTTP the entry point for http requests.
