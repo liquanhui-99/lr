@@ -26,12 +26,12 @@ type HTTPServer struct {
 }
 
 // ServeHTTP the entry point for http requests.
-func (H *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	return
 }
 
 // Start the method to start http server, received a string parameter named addr.
-func (H *HTTPServer) Start(addr string) error {
+func (h *HTTPServer) Start(addr string) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -40,6 +40,8 @@ func (H *HTTPServer) Start(addr string) error {
 	return http.Serve(l, nil)
 }
 
-func (H *HTTPServer) AddRouter(method string, path string, handler HandleFunc) {
+// AddRouter 添加路由信息
+func (h *HTTPServer) AddRouter(method string, path string, handler HandleFunc) {
+	h.router.AddRouter(method, path, handler)
 	return
 }
