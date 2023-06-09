@@ -36,10 +36,10 @@ func (H *HTTPServer) Start(addr string) error {
 	if err != nil {
 		return err
 	}
+	// TODO 可以做一些生命周期的管控
 	return http.Serve(l, nil)
 }
 
 func (H *HTTPServer) AddRouter(method string, path string, handler HandleFunc) {
-	//TODO implement me
-	panic("implement me")
+	return
 }
