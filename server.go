@@ -5,43 +5,68 @@ import (
 	"net/http"
 )
 
-type HandleFunc = func(ctx Context)
-
-type Server interface {
-	// Handler the http package interface included a HTTPServer method
-	http.Handler
-	// Start the method to start http server
-	Start(addr string) error
-
-	// AddRouter add route to http server. method is the http method,
-	// path is the routing path and handler is the method to handle request.
-	AddRouter(method string, path string, handler HandleFunc)
-}
+type HandleFunc func(ctx Context)
 
 var _ Server = (*HTTPServer)(nil)
 
-// HTTPServer http server struct
+// Server 核心API
+type Server interface {
+	http.Handler
+	Start(addr string) error
+	AddRouter(pattern, path string, handle HandleFunc)
+}
+
 type HTTPServer struct {
-	router router
 }
 
-// ServeHTTP the entry point for http requests.
 func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	return
+	ctx := &Context{
+		Req:  request,
+		Resp: writer,
+	}
+
+	h.serve(ctx)
 }
 
-// Start the method to start http server, received a string parameter named addr.
+func (h *HTTPServer) serve(ctx *Context) {
+	// TODO 处理路由查找和框架的逻辑
+}
+
 func (h *HTTPServer) Start(addr string) error {
-	l, err := net.Listen("tcp", addr)
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
-	// TODO 可以做一些生命周期的管控
-	return http.Serve(l, nil)
+	// 这里可以注册after start
+	return http.Serve(listener, h)
 }
 
-// AddRouter 添加路由信息
-func (h *HTTPServer) AddRouter(method string, path string, handler HandleFunc) {
-	h.router.AddRouter(method, path, handler)
-	return
+// AddRouter 注册路由，handle不提供多个，只允许注册一个，如果需要处理多个，需要用户在一个handle中实现
+func (h *HTTPServer) AddRouter(pattern, path string, handle HandleFunc) {
+	//TODO 注册到路由树
+	panic("implement me")
+}
+
+func (h *HTTPServer) Get(path string, handle HandleFunc) {
+	h.AddRouter(http.MethodGet, path, handle)
+}
+
+func (h *HTTPServer) POST(path string, handle HandleFunc) {
+	h.AddRouter(http.MethodPost, path, handle)
+}
+
+func (h *HTTPServer) PUT(path string, handle HandleFunc) {
+	h.AddRouter(http.MethodPut, path, handle)
+}
+
+func (h *HTTPServer) PATCH(path string, handle HandleFunc) {
+	h.AddRouter(http.MethodPatch, path, handle)
+}
+
+func (h *HTTPServer) DELETE(path string, handle HandleFunc) {
+	h.AddRouter(http.MethodDelete, path, handle)
+}
+
+func (h *HTTPServer) OPTIONS(path string, handle HandleFunc) {
+	h.AddRouter(http.MethodOptions, path, handle)
 }

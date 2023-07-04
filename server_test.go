@@ -1,13 +1,10 @@
 package lorm
 
-import (
-	"net/http"
-	"testing"
-)
+import "testing"
 
-func TestServer(t *testing.T) {
-	var s Server = &HTTPServer{}
-	if err := http.ListenAndServe(":8887", s); err != nil {
+func TestHTTPServer(t *testing.T) {
+	var h Server = &HTTPServer{}
+	if err := h.Start(":8080"); err != nil {
 		panic(err)
 	}
 }
