@@ -17,6 +17,13 @@ type Server interface {
 }
 
 type HTTPServer struct {
+	*router
+}
+
+func NewHTTPServer() *HTTPServer {
+	return &HTTPServer{
+		router: newRouter(),
+	}
 }
 
 func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -39,12 +46,6 @@ func (h *HTTPServer) Start(addr string) error {
 	}
 	// 这里可以注册after start
 	return http.Serve(listener, h)
-}
-
-// AddRouter 注册路由，handle不提供多个，只允许注册一个，如果需要处理多个，需要用户在一个handle中实现
-func (h *HTTPServer) AddRouter(pattern, path string, handle HandleFunc) {
-	//TODO 注册到路由树
-	panic("implement me")
 }
 
 func (h *HTTPServer) Get(path string, handle HandleFunc) {
