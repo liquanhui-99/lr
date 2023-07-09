@@ -2,6 +2,7 @@ package lorm
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 )
@@ -12,16 +13,36 @@ func TestRouter_AddRouter(t *testing.T) {
 		pattern string
 		path    string
 	}{
-		{},
+		{
+			name:    "path",
+			pattern: "POST",
+			path:    "/api/user",
+		},
 	}
-	var handler HandleFunc = func(c Context) {}
+	var mockHandler HandleFunc = func(c Context) {}
 	wantRouter := &router{
-		trees: make(map[string]*node),
+		trees: map[string]*node{
+			http.MethodPost: &node{
+				path: "/",
+				children: map[string]*node{
+					"api": &node{
+						path: "api",
+						children: map[string]*node{
+							"user": &node{
+								path:     "user",
+								children: map[string]*node{},
+								handler:  mockHandler,
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	router := newRouter()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			router.AddRouter(tc.pattern, tc.path, handler)
+			router.AddRouter(tc.pattern, tc.path, mockHandler)
 		})
 	}
 	msg, ok := router.equal(wantRouter)
@@ -33,6 +54,12 @@ func TestRouter_AddRouter(t *testing.T) {
 }
 
 func (r *router) equal(d *router) (string, bool) {
+	if r.trees == nil || d.trees == nil {
+		return fmt.Sprintf("匹配失败"), false
+	}
+	if len(r.trees) != len(d.trees) {
+		return fmt.Sprintf("匹配失败，路由树数量不匹配"), false
+	}
 	for method, tree := range r.trees {
 		val, ok := d.trees[method]
 		if !ok {
