@@ -9,30 +9,36 @@ import (
 func TestRouter_AddRouter(t *testing.T) {
 	testCases := []struct {
 		name    string
-		path    string
 		pattern string
+		path    string
 	}{
 		{},
 	}
-
-	var mockHandler HandleFunc = func(ctx Context) {}
+	var handler HandleFunc = func(c Context) {}
+	wantRouter := &router{
+		trees: make(map[string]*node),
+	}
+	router := newRouter()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			router := newRouter()
-			router.AddRouter(tc.pattern, tc.path, mockHandler)
+			router.AddRouter(tc.pattern, tc.path, handler)
 		})
 	}
-
+	msg, ok := router.equal(wantRouter)
+	if !ok {
+		fmt.Println("结果为: ", msg)
+		return
+	}
+	fmt.Println("匹配成功！")
 }
 
 func (r *router) equal(d *router) (string, bool) {
-	for k, v := range r.trees {
-		dst, ok := d.trees[k]
+	for method, tree := range r.trees {
+		val, ok := d.trees[method]
 		if !ok {
-			return fmt.Sprintf("请求方法不匹配"), false
+			return fmt.Sprintf("请求的方法不匹配"), false
 		}
-		// 比较每一个节点树是否相等
-		msg, ok := v.equal(dst)
+		msg, ok := tree.equal(val)
 		if !ok {
 			return msg, false
 		}
@@ -41,33 +47,28 @@ func (r *router) equal(d *router) (string, bool) {
 }
 
 func (n *node) equal(d *node) (string, bool) {
-	// 比较当前节点的路径
 	if n.path != d.path {
-		return fmt.Sprintf("节点路径不匹配"), false
+		return fmt.Sprint("节点的路径不匹配"), false
 	}
-
-	// 比较handler
+	// 比对handler是否一致
 	nHandler := reflect.ValueOf(n.handler)
 	dHandler := reflect.ValueOf(d.handler)
 	if nHandler != dHandler {
-		return fmt.Sprintf("HandlerFunc不想等"), false
+		return fmt.Sprintf("节点的handler不匹配"), false
 	}
 
-	// 比较子节点的路径数量
 	if len(n.children) != len(d.children) {
-		return fmt.Sprintf("子节点路径数量不一致"), false
+		return fmt.Sprintf("子节点数量不想等"), false
 	}
-
-	for k, v := range n.children {
-		val, ok := d.children[k]
+	for path, node := range n.children {
+		val, ok := d.children[path]
 		if !ok {
 			return fmt.Sprintf("子节点路径不匹配"), false
 		}
-		msg, ok := v.equal(val)
+		msg, ok := node.equal(val)
 		if !ok {
 			return msg, false
 		}
 	}
-
 	return "", true
 }
