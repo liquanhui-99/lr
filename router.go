@@ -25,32 +25,36 @@ func newRouter() *router {
 
 // AddRouter 注册路由信息
 func (r *router) AddRouter(pattern, path string, handler HandleFunc) {
+	// 判断树是否存在，不存在则创建
+	var root *node
 	root, ok := r.trees[pattern]
 	if !ok {
 		root = &node{
 			path:     "/",
-			children: make(map[string]*node),
+			children: map[string]*node{},
 		}
 		r.trees[pattern] = root
 	}
-	path = strings.TrimLeft(path, "/")
+
+	// 切割path，并遍历每一个路径是否存在，不存在则创建
+	path = strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/")
 	segs := strings.Split(path, "/")
 	for _, seg := range segs {
-		// 递归查找每一个子节点是否存在
-		children := root.childOrCreate(seg)
+		children := root.childOperator(seg)
 		root = children
 	}
 	root.handler = handler
 }
 
-func (n *node) childOrCreate(seg string) *node {
+func (n *node) childOperator(seg string) *node {
 	if n.children == nil {
-		n.children = make(map[string]*node)
+		n.children = map[string]*node{}
 	}
 	res, ok := n.children[seg]
 	if !ok {
 		res = &node{
-			path: seg,
+			path:     seg,
+			children: map[string]*node{},
 		}
 		n.children[seg] = res
 	}

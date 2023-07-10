@@ -16,7 +16,7 @@ func TestRouter_AddRouter(t *testing.T) {
 		{
 			name:    "path",
 			pattern: "POST",
-			path:    "/api/user",
+			path:    "/api/user/login",
 		},
 	}
 	var mockHandler HandleFunc = func(c Context) {}
@@ -29,9 +29,14 @@ func TestRouter_AddRouter(t *testing.T) {
 						path: "api",
 						children: map[string]*node{
 							"user": &node{
-								path:     "user",
-								children: map[string]*node{},
-								handler:  mockHandler,
+								path: "user",
+								children: map[string]*node{
+									"login": &node{
+										path:     "login",
+										children: map[string]*node{},
+										handler:  mockHandler,
+									},
+								},
 							},
 						},
 					},
