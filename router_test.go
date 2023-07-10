@@ -2,6 +2,7 @@ package lorm
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"reflect"
 	"testing"
@@ -14,9 +15,24 @@ func TestRouter_AddRouter(t *testing.T) {
 		path    string
 	}{
 		{
-			name:    "path",
-			pattern: "POST",
+			pattern: http.MethodGet,
+			path:    "/",
+		},
+		{
+			pattern: http.MethodGet,
+			path:    "/login",
+		},
+		{
+			pattern: http.MethodGet,
+			path:    "/login/verifyCode",
+		},
+		{
+			pattern: http.MethodPost,
 			path:    "/api/user/login",
+		},
+		{
+			pattern: http.MethodDelete,
+			path:    "/user/code",
 		},
 	}
 	var mockHandler HandleFunc = func(c Context) {}
@@ -42,6 +58,38 @@ func TestRouter_AddRouter(t *testing.T) {
 					},
 				},
 			},
+			http.MethodGet: &node{
+				path: "/",
+				children: map[string]*node{
+					"login": &node{
+						path: "login",
+						children: map[string]*node{
+							"verifyCode": &node{
+								path:     "verifyCode",
+								children: map[string]*node{},
+								handler:  mockHandler,
+							},
+						},
+						handler: mockHandler,
+					},
+				},
+				handler: mockHandler,
+			},
+			http.MethodDelete: &node{
+				path: "/",
+				children: map[string]*node{
+					"user": &node{
+						path: "user",
+						children: map[string]*node{
+							"code": &node{
+								path:     "code",
+								children: map[string]*node{},
+								handler:  mockHandler,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	router := newRouter()
@@ -53,9 +101,25 @@ func TestRouter_AddRouter(t *testing.T) {
 	msg, ok := router.equal(wantRouter)
 	if !ok {
 		fmt.Println("结果为: ", msg)
-		return
 	}
 	fmt.Println("匹配成功！")
+}
+
+func TestPanic(t *testing.T) {
+	var mockHandler HandleFunc = func(ctx Context) {}
+	router := newRouter()
+	assert.Panicsf(t, func() {
+		router.AddRouter(http.MethodPut, "", mockHandler)
+	}, "请求路径不能为空")
+	assert.Panicsf(t, func() {
+		router.AddRouter(http.MethodPut, "user", mockHandler)
+	}, "请求路径不是以/开头")
+	assert.Panicsf(t, func() {
+		router.AddRouter(http.MethodPut, "/user/", mockHandler)
+	}, "请求路径不能以/结尾")
+	assert.Panicsf(t, func() {
+		router.AddRouter(http.MethodPut, "/user//code", mockHandler)
+	}, "请求路径不能包含连续的/")
 }
 
 func (r *router) equal(d *router) (string, bool) {
