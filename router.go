@@ -99,3 +99,8 @@ func (n *node) childOperator(seg string) *node {
 	}
 	return res
 }
+
+func (r *router) matchRouter(pattern, path string) (*node, bool) {
+
+	return nil, true
+}

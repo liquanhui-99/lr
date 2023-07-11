@@ -181,3 +181,55 @@ func (n *node) equal(d *node) (string, bool) {
 	}
 	return "", true
 }
+
+func TestMatchRouter(t *testing.T) {
+	testRouter := []struct {
+		name    string
+		pattern string
+		path    string
+	}{
+		{
+			name:    "",
+			pattern: http.MethodGet,
+			path:    "/user/login",
+		},
+	}
+
+	var mockHandler HandleFunc = func(ctx Context) {}
+	router := newRouter()
+	for _, tc := range testRouter {
+		t.Run(tc.name, func(t *testing.T) {
+			router.addRouter(tc.pattern, tc.path, mockHandler)
+		})
+	}
+
+	testCases := []struct {
+		name      string
+		pattern   string
+		path      string
+		wantFound bool
+		wantNode  *node
+	}{
+		{
+			name:      "match router",
+			pattern:   http.MethodGet,
+			path:      "/user/login",
+			wantFound: true,
+			wantNode:  &node{},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			node, ok := router.matchRouter(tc.pattern, tc.path)
+			assert.Equal(t, tc.wantFound, ok)
+			if !ok {
+				return
+			}
+			assert.Equal(t, tc.path, node.path)
+			assert.Equal(t, tc.wantNode.children, node.children)
+			yHandler := reflect.ValueOf(tc.wantNode.children)
+			nHandler := reflect.ValueOf(node.children)
+			assert.True(t, yHandler == nHandler)
+		})
+	}
+}
