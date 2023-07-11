@@ -1,6 +1,9 @@
 package lorm
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // router 一个森林，每一种请求方式都是一颗树，
 // key是请求的方法，value是树的节点
@@ -23,8 +26,8 @@ func newRouter() *router {
 	}
 }
 
-// AddRouter 注册路由信息
-func (r *router) AddRouter(pattern, path string, handler HandleFunc) {
+// addRouter 注册路由信息
+func (r *router) addRouter(pattern, path string, handler HandleFunc) {
 	// 校验请求路径是否合法
 	r.validatePath(path)
 	// 判断树是否存在，不存在则创建
@@ -39,6 +42,9 @@ func (r *router) AddRouter(pattern, path string, handler HandleFunc) {
 
 	// 根节点特殊处理
 	if path == "/" {
+		if root.handler != nil {
+			panic(fmt.Sprintf("请求路径[%s]已注册", path))
+		}
 		root.handler = handler
 		return
 	}
@@ -52,6 +58,9 @@ func (r *router) AddRouter(pattern, path string, handler HandleFunc) {
 		}
 		children := root.childOperator(seg)
 		root = children
+	}
+	if root.handler != nil {
+		panic(fmt.Sprintf("请求路径[%s]已注册", path))
 	}
 	root.handler = handler
 }
@@ -86,6 +95,7 @@ func (n *node) childOperator(seg string) *node {
 			children: map[string]*node{},
 		}
 		n.children[seg] = res
+
 	}
 	return res
 }

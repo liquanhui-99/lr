@@ -13,7 +13,7 @@ var _ Server = (*HTTPServer)(nil)
 type Server interface {
 	http.Handler
 	Start(addr string) error
-	AddRouter(pattern, path string, handle HandleFunc)
+	addRouter(pattern, path string, handle HandleFunc)
 }
 
 type HTTPServer struct {
@@ -49,25 +49,25 @@ func (h *HTTPServer) Start(addr string) error {
 }
 
 func (h *HTTPServer) Get(path string, handle HandleFunc) {
-	h.AddRouter(http.MethodGet, path, handle)
+	h.addRouter(http.MethodGet, path, handle)
 }
 
 func (h *HTTPServer) POST(path string, handle HandleFunc) {
-	h.AddRouter(http.MethodPost, path, handle)
+	h.addRouter(http.MethodPost, path, handle)
 }
 
 func (h *HTTPServer) PUT(path string, handle HandleFunc) {
-	h.AddRouter(http.MethodPut, path, handle)
+	h.addRouter(http.MethodPut, path, handle)
 }
 
 func (h *HTTPServer) PATCH(path string, handle HandleFunc) {
-	h.AddRouter(http.MethodPatch, path, handle)
+	h.addRouter(http.MethodPatch, path, handle)
 }
 
 func (h *HTTPServer) DELETE(path string, handle HandleFunc) {
-	h.AddRouter(http.MethodDelete, path, handle)
+	h.addRouter(http.MethodDelete, path, handle)
 }
 
 func (h *HTTPServer) OPTIONS(path string, handle HandleFunc) {
-	h.AddRouter(http.MethodOptions, path, handle)
+	h.addRouter(http.MethodOptions, path, handle)
 }

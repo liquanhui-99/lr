@@ -95,7 +95,7 @@ func TestRouter_AddRouter(t *testing.T) {
 	router := newRouter()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			router.AddRouter(tc.pattern, tc.path, mockHandler)
+			router.addRouter(tc.pattern, tc.path, mockHandler)
 		})
 	}
 	msg, ok := router.equal(wantRouter)
@@ -109,17 +109,30 @@ func TestPanic(t *testing.T) {
 	var mockHandler HandleFunc = func(ctx Context) {}
 	router := newRouter()
 	assert.Panicsf(t, func() {
-		router.AddRouter(http.MethodPut, "", mockHandler)
+		router.addRouter(http.MethodPut, "", mockHandler)
 	}, "请求路径不能为空")
 	assert.Panicsf(t, func() {
-		router.AddRouter(http.MethodPut, "user", mockHandler)
+		router.addRouter(http.MethodPut, "user", mockHandler)
 	}, "请求路径不是以/开头")
 	assert.Panicsf(t, func() {
-		router.AddRouter(http.MethodPut, "/user/", mockHandler)
+		router.addRouter(http.MethodPut, "/user/", mockHandler)
 	}, "请求路径不能以/结尾")
 	assert.Panicsf(t, func() {
-		router.AddRouter(http.MethodPut, "/user//code", mockHandler)
+		router.addRouter(http.MethodPut, "/user//code", mockHandler)
 	}, "请求路径不能包含连续的/")
+}
+
+func TestRepeatedPath(t *testing.T) {
+	var mockHandler HandleFunc = func(ctx Context) {}
+	router := newRouter()
+	router.addRouter(http.MethodGet, "/", mockHandler)
+	assert.Panicsf(t, func() {
+		router.addRouter(http.MethodGet, "/", mockHandler)
+	}, "请求路径[/]已注册")
+	router.addRouter(http.MethodPut, "/user/login", mockHandler)
+	assert.Panicsf(t, func() {
+		router.addRouter(http.MethodPut, "/user/login", mockHandler)
+	}, "请求路径[/user/login]已注册")
 }
 
 func (r *router) equal(d *router) (string, bool) {
