@@ -35,7 +35,7 @@ func TestRouter_AddRouter(t *testing.T) {
 			path:    "/user/code",
 		},
 	}
-	var mockHandler HandleFunc = func(c Context) {}
+	var mockHandler HandleFunc = func(c *Context) {}
 	wantRouter := &router{
 		trees: map[string]*node{
 			http.MethodPost: &node{
@@ -106,7 +106,7 @@ func TestRouter_AddRouter(t *testing.T) {
 }
 
 func TestPanic(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
+	var mockHandler HandleFunc = func(ctx *Context) {}
 	router := newRouter()
 	assert.Panicsf(t, func() {
 		router.addRouter(http.MethodPut, "", mockHandler)
@@ -123,7 +123,7 @@ func TestPanic(t *testing.T) {
 }
 
 func TestRepeatedPath(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
+	var mockHandler HandleFunc = func(ctx *Context) {}
 	router := newRouter()
 	router.addRouter(http.MethodGet, "/", mockHandler)
 	assert.Panicsf(t, func() {
@@ -195,7 +195,7 @@ func TestMatchRouter(t *testing.T) {
 		},
 	}
 
-	var mockHandler HandleFunc = func(ctx Context) {}
+	var mockHandler HandleFunc = func(ctx *Context) {}
 	router := newRouter()
 	for _, tc := range testRouter {
 		t.Run(tc.name, func(t *testing.T) {
@@ -225,6 +225,11 @@ func TestMatchRouter(t *testing.T) {
 				handler:  mockHandler,
 				children: map[string]*node{},
 			},
+		},
+		{
+			name:    "match not found",
+			pattern: http.MethodPost,
+			path:    "/order",
 		},
 	}
 	for _, tc := range testCases {
