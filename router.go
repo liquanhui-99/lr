@@ -95,12 +95,33 @@ func (n *node) childOperator(seg string) *node {
 			children: map[string]*node{},
 		}
 		n.children[seg] = res
-
 	}
 	return res
 }
 
-func (r *router) matchRouter(pattern, path string) (*node, bool) {
+func (n *node) match(seg string) (*node, bool) {
+	if n.children == nil {
+		return nil, false
+	}
+	child, ok := n.children[seg]
+	return child, ok
+}
 
-	return nil, true
+func (r *router) matchRouter(pattern, path string) (*node, bool) {
+	tree, ok := r.trees[pattern]
+	if !ok {
+		return nil, false
+	}
+
+	path = strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/")
+	segs := strings.Split(path, "/")
+	for _, seg := range segs {
+		children, ok := tree.match(seg)
+		if !ok {
+			return nil, false
+		}
+		tree = children
+	}
+	// 判断节点存在的情况下，是否有handler
+	return tree, tree.handler != nil
 }

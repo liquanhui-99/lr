@@ -211,11 +211,20 @@ func TestMatchRouter(t *testing.T) {
 		wantNode  *node
 	}{
 		{
+			name:    "not exist method",
+			pattern: http.MethodOptions,
+			path:    "/user/login",
+		},
+		{
 			name:      "match router",
 			pattern:   http.MethodGet,
 			path:      "/user/login",
 			wantFound: true,
-			wantNode:  &node{},
+			wantNode: &node{
+				path:     "login",
+				handler:  mockHandler,
+				children: map[string]*node{},
+			},
 		},
 	}
 	for _, tc := range testCases {
@@ -225,10 +234,10 @@ func TestMatchRouter(t *testing.T) {
 			if !ok {
 				return
 			}
-			assert.Equal(t, tc.path, node.path)
+			assert.Equal(t, tc.wantNode.path, node.path)
 			assert.Equal(t, tc.wantNode.children, node.children)
-			yHandler := reflect.ValueOf(tc.wantNode.children)
-			nHandler := reflect.ValueOf(node.children)
+			yHandler := reflect.ValueOf(tc.wantNode.handler)
+			nHandler := reflect.ValueOf(node.handler)
 			assert.True(t, yHandler == nHandler)
 		})
 	}
