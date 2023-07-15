@@ -18,6 +18,8 @@ type node struct {
 	children map[string]*node
 	// 业务处理逻辑
 	handler HandleFunc
+	// 请求路径上的参数(/user/login/:123)
+	paramChild *node
 }
 
 func newRouter() *router {
@@ -85,6 +87,15 @@ func (r *router) validatePath(path string) {
 }
 
 func (n *node) childOperator(seg string) *node {
+	// 处理请求路径上的参数
+	if seg[0] == ':' {
+		n.paramChild = &node{
+			path: seg,
+		}
+		return n.paramChild
+	}
+
+	// 静态路由处理
 	if n.children == nil {
 		n.children = map[string]*node{}
 	}
@@ -99,15 +110,28 @@ func (n *node) childOperator(seg string) *node {
 	return res
 }
 
-func (n *node) match(seg string) (*node, bool) {
+// match 匹配请求路径，优先匹配静态路由，再匹配路径参数
+// *node 匹配的节点信息
+// bool 是否是路径参数
+// bool 是否匹配到该路径
+func (n *node) match(seg string) (*node, bool, bool) {
 	if n.children == nil {
-		return nil, false
+		if n.paramChild != nil {
+			return n.paramChild, true, true
+		}
 	}
+
 	child, ok := n.children[seg]
-	return child, ok
+	if !ok {
+		if n.paramChild != nil {
+			return n.paramChild, true, true
+		}
+		return nil, false, n.paramChild != nil
+	}
+	return child, false, ok
 }
 
-func (r *router) matchRouter(pattern, path string) (*node, bool) {
+func (r *router) matchRouter(pattern, path string) (*pathInfo, bool) {
 	tree, ok := r.trees[pattern]
 	if !ok {
 		return nil, false
@@ -116,12 +140,27 @@ func (r *router) matchRouter(pattern, path string) (*node, bool) {
 	path = strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/")
 	segs := strings.Split(path, "/")
 	for _, seg := range segs {
-		children, ok := tree.match(seg)
+		children, pt, ok := tree.match(seg)
 		if !ok {
 			return nil, false
+		}
+		// 命中了路径参数
+		if pt {
+			return &pathInfo{
+				n:          children,
+				pathParams: map[string]string{},
+			}, true
 		}
 		tree = children
 	}
 	// 判断节点存在的情况下，是否有handler
-	return tree, tree.handler != nil
+	return &pathInfo{}, tree.handler != nil
+}
+
+// pathInfo 路径信息
+type pathInfo struct {
+	// 节点信息
+	n *node
+	// 路径参数，key是参数名，value是参数对应的值
+	pathParams map[string]string
 }
