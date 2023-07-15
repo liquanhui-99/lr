@@ -159,6 +159,13 @@ func (n *node) equal(d *node) (string, bool) {
 	if n.path != d.path {
 		return fmt.Sprint("节点的路径不匹配"), false
 	}
+
+	// 处理路径参数的查找
+	if n.paramChild != nil {
+		msg, ok := n.paramChild.equal(d.paramChild)
+		return msg, ok
+	}
+
 	// 比对handler是否一致
 	nHandler := reflect.ValueOf(n.handler)
 	dHandler := reflect.ValueOf(d.handler)
@@ -208,7 +215,7 @@ func TestMatchRouter(t *testing.T) {
 		pattern   string
 		path      string
 		wantFound bool
-		wantNode  *node
+		wantNode  *pathInfo
 	}{
 		{
 			name:    "not exist method",
@@ -220,10 +227,12 @@ func TestMatchRouter(t *testing.T) {
 			pattern:   http.MethodGet,
 			path:      "/user/login",
 			wantFound: true,
-			wantNode: &node{
-				path:     "login",
-				handler:  mockHandler,
-				children: map[string]*node{},
+			wantNode: &pathInfo{
+				n: &node{
+					path:     "login",
+					handler:  mockHandler,
+					children: map[string]*node{},
+				},
 			},
 		},
 		{
@@ -239,11 +248,118 @@ func TestMatchRouter(t *testing.T) {
 			if !ok {
 				return
 			}
-			assert.Equal(t, tc.wantNode.path, node.path)
-			assert.Equal(t, tc.wantNode.children, node.children)
-			yHandler := reflect.ValueOf(tc.wantNode.handler)
-			nHandler := reflect.ValueOf(node.handler)
+			assert.Equal(t, tc.wantNode.n.path, node.n.path)
+			assert.Equal(t, tc.wantNode.n.children, node.n.children)
+			yHandler := reflect.ValueOf(tc.wantNode.n.handler)
+			nHandler := reflect.ValueOf(node.n.handler)
 			assert.True(t, yHandler == nHandler)
 		})
+	}
+}
+
+func TestRouter_pathParam(t *testing.T) {
+	testCases := []struct {
+		pattern string
+		name    string
+		path    string
+	}{
+		{
+			name:    "path parameter",
+			pattern: http.MethodGet,
+			path:    "/task/result/:id",
+		},
+		{
+			name:    "path parameter",
+			pattern: http.MethodGet,
+			path:    "/user/:id",
+		},
+	}
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	wantRouter := &router{
+		trees: map[string]*node{
+			http.MethodGet: &node{
+				path: "/",
+				children: map[string]*node{
+					"task": &node{
+						path: "task",
+						children: map[string]*node{
+							"result": &node{
+								path: "result",
+								paramChild: &node{
+									path:    ":id",
+									handler: mockHandler,
+								},
+							},
+						},
+					},
+					"user": &node{
+						path: "user",
+						paramChild: &node{
+							path:    ":id",
+							handler: mockHandler,
+						},
+					},
+				},
+			},
+		},
+	}
+	r := newRouter()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r.addRouter(tc.pattern, tc.path, mockHandler)
+		})
+	}
+	msg, ok := r.equal(wantRouter)
+	if !ok {
+		panic(msg)
+	}
+}
+
+func TestRouter_MatchParam(t *testing.T) {
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	testCases := []struct {
+		name     string
+		pattern  string
+		path     string
+		wantNode *pathInfo
+	}{
+		{
+			name:    "多个路径",
+			pattern: http.MethodGet,
+			path:    "/task/result/:id",
+			wantNode: &pathInfo{
+				n: &node{
+					path:    ":id",
+					handler: mockHandler,
+				},
+			},
+		},
+		{
+			name:    "两个路径",
+			pattern: http.MethodGet,
+			path:    "/order/:name",
+			wantNode: &pathInfo{
+				n: &node{
+					path:    ":name",
+					handler: mockHandler,
+				},
+			},
+		},
+	}
+	r := newRouter()
+	for _, tc := range testCases {
+		r.addRouter(tc.pattern, tc.path, mockHandler)
+	}
+
+	for _, tc := range testCases {
+		node, ok := r.matchRouter(tc.pattern, tc.path)
+		if !ok {
+			fmt.Println("不匹配")
+			return
+		}
+		assert.Equal(t, tc.wantNode.n.path, node.n.path)
+		yHandler := reflect.ValueOf(tc.wantNode.n.handler)
+		nHandler := reflect.ValueOf(node.n.handler)
+		assert.True(t, yHandler == nHandler)
 	}
 }

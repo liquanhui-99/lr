@@ -38,11 +38,11 @@ func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request
 func (h *HTTPServer) serve(ctx *Context) {
 	//  处理路由查找和框架的逻辑
 	node, ok := h.matchRouter(ctx.Req.Method, ctx.Req.URL.Path)
-	if !ok || node.handler == nil {
+	if !ok || node.n.handler == nil {
 		ctx.Resp.WriteHeader(http.StatusNotFound)
 		_, _ = ctx.Resp.Write([]byte("404 Not Found"))
 	}
-	node.handler(ctx)
+	node.n.handler(ctx)
 }
 
 func (h *HTTPServer) Start(addr string) error {
