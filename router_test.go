@@ -273,6 +273,11 @@ func TestRouter_pathParam(t *testing.T) {
 			pattern: http.MethodGet,
 			path:    "/user/:id",
 		},
+		{
+			name:    "同路径同时存在静态路径和路径参数",
+			pattern: http.MethodGet,
+			path:    "/task/:id",
+		},
 	}
 	var mockHandler HandleFunc = func(ctx *Context) {}
 	wantRouter := &router{
@@ -290,6 +295,10 @@ func TestRouter_pathParam(t *testing.T) {
 									handler: mockHandler,
 								},
 							},
+						},
+						paramChild: &node{
+							path:    ":id",
+							handler: mockHandler,
 						},
 					},
 					"user": &node{
@@ -361,5 +370,46 @@ func TestRouter_MatchParam(t *testing.T) {
 		yHandler := reflect.ValueOf(tc.wantNode.n.handler)
 		nHandler := reflect.ValueOf(node.n.handler)
 		assert.True(t, yHandler == nHandler)
+	}
+}
+
+func TestRouter_PathParam(t *testing.T) {
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	r := newRouter()
+	r.addRouter(http.MethodGet, "/task/:taskName", mockHandler)
+	testCases := []struct {
+		name      string
+		pattern   string
+		path      string
+		wantFound bool
+		info      *pathInfo
+	}{
+		{
+			name:      "获取路径参数",
+			pattern:   http.MethodGet,
+			path:      "/task/:testName",
+			wantFound: true,
+			info: &pathInfo{
+				n: &node{
+					path:    ":taskName",
+					handler: mockHandler,
+				},
+				pathParams: map[string]string{
+					"taskName": "testName",
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			info, ok := r.matchRouter(tc.pattern, tc.path)
+			assert.Equal(t, tc.wantFound, ok)
+			assert.Equal(t, tc.info.n.path, info.n.path)
+			assert.Equal(t, tc.info.pathParams, info.pathParams)
+			msg, ok := tc.info.n.equal(info.n)
+			if !ok {
+				panic(msg)
+			}
+		})
 	}
 }

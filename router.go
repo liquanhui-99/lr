@@ -132,9 +132,11 @@ func (n *node) match(seg string) (*node, bool, bool) {
 }
 
 func (r *router) matchRouter(pattern, path string) (*pathInfo, bool) {
+	// 校验请求路径
+	r.validatePath(path)
 	tree, ok := r.trees[pattern]
 	if !ok {
-		return nil, false
+		return &pathInfo{}, false
 	}
 
 	path = strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/")
@@ -142,13 +144,15 @@ func (r *router) matchRouter(pattern, path string) (*pathInfo, bool) {
 	for _, seg := range segs {
 		children, pt, ok := tree.match(seg)
 		if !ok {
-			return nil, false
+			return &pathInfo{}, false
 		}
 		// 命中了路径参数
 		if pt {
 			return &pathInfo{
-				n:          children,
-				pathParams: map[string]string{},
+				n: children,
+				pathParams: map[string]string{
+					children.path[1:]: seg[1:],
+				},
 			}, true
 		}
 		tree = children
