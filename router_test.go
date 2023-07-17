@@ -413,3 +413,62 @@ func TestRouter_PathParam(t *testing.T) {
 		})
 	}
 }
+
+func Benchmark_MatchRouter(b *testing.B) {
+	r := newRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	testCases := []struct {
+		name    string
+		pattern string
+		path    string
+	}{
+		{
+			name:    "Get method",
+			pattern: http.MethodGet,
+			path:    "/api/getCode",
+		},
+		{
+			name:    "Get method multiple path",
+			pattern: http.MethodGet,
+			path:    "/task/result/detail",
+		},
+		{
+			name:    "Get method multiple path1",
+			pattern: http.MethodGet,
+			path:    "/task/result/detail/instance",
+		},
+		{
+			name:    "Get method multiple path",
+			pattern: http.MethodGet,
+			path:    "/task/result/:id",
+		},
+		{
+			name:    "Post method",
+			pattern: http.MethodPost,
+			path:    "/login",
+		},
+		{
+			name:    "Put method",
+			pattern: http.MethodPut,
+			path:    "/task/login/:username",
+		},
+		{
+			name:    "Delete method",
+			pattern: http.MethodPut,
+			path:    "/task/login/:id",
+		},
+	}
+	for _, tc := range testCases {
+		r.addRouter(tc.pattern, tc.path, mockHandler)
+	}
+	for i := 0; i < b.N; i++ {
+		for _, tc := range testCases {
+			b.Run(tc.name, func(b *testing.B) {
+				_, ok := r.matchRouter(tc.pattern, tc.path)
+				if !ok {
+					panic("未匹配到路径")
+				}
+			})
+		}
+	}
+}
