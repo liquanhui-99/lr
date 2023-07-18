@@ -158,7 +158,9 @@ func (r *router) matchRouter(pattern, path string) (*pathInfo, bool) {
 		tree = children
 	}
 	// 判断节点存在的情况下，是否有handler
-	return &pathInfo{}, tree.handler != nil
+	return &pathInfo{
+		n: tree,
+	}, tree.handler != nil
 }
 
 // pathInfo 路径信息

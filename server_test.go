@@ -13,6 +13,17 @@ func TestHTTPServer(t *testing.T) {
 		_, _ = ctx.Resp.Write([]byte("4321"))
 	})
 
+	s.Get("/query", func(ctx *Context) {
+		_, err := ctx.QueryValue("test").Int()
+		if err != nil {
+			ctx.Resp.WriteHeader(http.StatusBadRequest)
+			_, _ = ctx.Resp.Write([]byte("参数不正确"))
+		}
+
+		ctx.Resp.WriteHeader(http.StatusOK)
+		_, _ = ctx.Resp.Write([]byte("处理成功"))
+	})
+
 	s.Get("/user/login", func(ctx *Context) {
 		code := ctx.Req.URL.Query().Get("code")
 		if code == "4321" {
