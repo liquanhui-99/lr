@@ -17,11 +17,11 @@ func TestHTTPServer(t *testing.T) {
 		_, err := ctx.QueryValue("test").Int()
 		if err != nil {
 			ctx.Resp.WriteHeader(http.StatusBadRequest)
-			_, _ = ctx.Resp.Write([]byte("参数不正确"))
+			_, _ = ctx.Resp.Write([]byte(err.Error()))
+			return
 		}
 
-		ctx.Resp.WriteHeader(http.StatusOK)
-		_, _ = ctx.Resp.Write([]byte("处理成功"))
+		ctx.RespOKWithMessage("成功处理")
 	})
 
 	s.Get("/user/login", func(ctx *Context) {

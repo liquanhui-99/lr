@@ -2,10 +2,22 @@ package lorm
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"errors"
+	"github.com/golang/protobuf/proto"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+)
+
+const (
+	// JSON类型的数据
+	jsonType = iota
+	// XML类型的数据
+	xmlType
+	// Protobuf类型的数据
+	protobufType
 )
 
 type Context struct {
@@ -19,6 +31,9 @@ type Context struct {
 	pathParams map[string]string
 }
 
+// 处理请求数据的方法
+//解析Json、XML、Protobuf、Query、Form和Path参数
+
 // BindJson 解析json数据
 func (c *Context) BindJson(val any) error {
 	if val == nil {
@@ -31,6 +46,36 @@ func (c *Context) BindJson(val any) error {
 
 	decoder := json.NewDecoder(c.Req.Body)
 	return decoder.Decode(val)
+}
+
+// BindXml 解析xml数据
+func (c *Context) BindXml(val any) error {
+	if val == nil {
+		return errors.New("输入不能为nil")
+	}
+	if c.Req.Body == nil {
+		return errors.New("请求body不能为nil")
+	}
+
+	xl := xml.NewDecoder(c.Req.Body)
+	return xl.Decode(val)
+}
+
+// BindProtobuf 解析protobuf数据
+func (c *Context) BindProtobuf(val proto.Message) error {
+	if val == nil {
+		return errors.New("输入不能为nil")
+	}
+	if c.Req.Body == nil {
+		return errors.New("请求body不能为nil")
+	}
+	body, err := io.ReadAll(c.Req.Body)
+	if err != nil {
+		return err
+	}
+
+	buf := proto.NewBuffer(body)
+	return buf.DecodeMessage(val)
 }
 
 // BindForm 解析form类型的参数信息
@@ -177,4 +222,67 @@ func (s StringValue) Float64() (float64, error) {
 	}
 
 	return strconv.ParseFloat(s.val, 64)
+}
+
+// 处理返回相应的方法
+
+// bindResp 处理响应的基础方法
+func (c *Context) bindResp(status int, val []byte, tp int) error {
+	data, err := json.Marshal(val)
+	if err != nil {
+		return err
+	}
+
+	c.Resp.WriteHeader(status)
+	switch tp {
+	case jsonType:
+		c.Resp.Header().Set("Content-Type", "application/json")
+	case xmlType:
+		c.Resp.Header().Set("Content-Type", "application/xml")
+	case protobufType:
+		c.Resp.Header().Set("Content-Type", "application/octet-stream")
+	}
+	c.Resp.Header().Set("Content-Length", strconv.Itoa(len(data)))
+
+	n, err := c.Resp.Write(data)
+	if err != nil {
+		return err
+	}
+	if n != len(data) {
+		return errors.New("未返回全部的数据")
+	}
+	return nil
+}
+
+// RespJsonOk 成功的Json响应
+func (c *Context) RespJsonOk(data any) error {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return c.bindResp(http.StatusOK, jsonData, jsonType)
+}
+
+// RespXMLOK 成功的XML响应
+func (c *Context) RespXMLOK(val any) error {
+	xmlData, err := xml.Marshal(val)
+	if err != nil {
+		return err
+	}
+	return c.bindResp(http.StatusOK, xmlData, xmlType)
+}
+
+// RespProtobufOK 成功的protobuf响应
+func (c *Context) RespProtobufOK(val proto.Message) error {
+	protoData, err := proto.Marshal(val)
+	if err != nil {
+		return err
+	}
+	return c.bindResp(http.StatusOK, protoData, protobufType)
+}
+
+// RespOKWithMessage 字符串格式的成功响应
+func (c *Context) RespOKWithMessage(val string) {
+	c.Resp.WriteHeader(http.StatusOK)
+	_, _ = c.Resp.Write([]byte(val))
 }
