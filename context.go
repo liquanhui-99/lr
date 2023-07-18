@@ -95,7 +95,7 @@ type StringValue struct {
 }
 
 // Int64 转换string为int64
-func (s *StringValue) Int64() (int64, error) {
+func (s StringValue) Int64() (int64, error) {
 	if s.err != nil {
 		return 0, s.err
 	}
@@ -103,7 +103,7 @@ func (s *StringValue) Int64() (int64, error) {
 }
 
 // Uint64 转换string为Uint64
-func (s *StringValue) Uint64() (uint64, error) {
+func (s StringValue) Uint64() (uint64, error) {
 	if s.err != nil {
 		return 0, s.err
 	}
@@ -112,7 +112,7 @@ func (s *StringValue) Uint64() (uint64, error) {
 }
 
 // Int 转换string为int
-func (s *StringValue) Int() (int, error) {
+func (s StringValue) Int() (int, error) {
 	if s.err != nil {
 		return 0, s.err
 	}
@@ -121,7 +121,7 @@ func (s *StringValue) Int() (int, error) {
 }
 
 // Uint 转换string为uint
-func (s *StringValue) Uint() (uint, error) {
+func (s StringValue) Uint() (uint, error) {
 	if s.err != nil {
 		return 0, s.err
 	}
@@ -131,4 +131,50 @@ func (s *StringValue) Uint() (uint, error) {
 		return 0, err
 	}
 	return uint(res), nil
+}
+
+// Int32 转换string为int32
+func (s StringValue) Int32() (int32, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+	res, err := strconv.ParseInt(s.val, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int32(res), nil
+}
+
+// Uint32 转换string为uint32
+func (s StringValue) Uint32() (uint32, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+	res, err := strconv.ParseUint(s.val, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(res), nil
+}
+
+// Float32 转换字符串为float32
+func (s StringValue) Float32() (float32, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+
+	res, err := strconv.ParseFloat(s.val, 32)
+	if err != nil {
+		return 0, err
+	}
+	return float32(res), nil
+}
+
+// Float64 转换字符串为float64
+func (s StringValue) Float64() (float64, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+
+	return strconv.ParseFloat(s.val, 64)
 }
