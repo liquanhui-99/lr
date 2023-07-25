@@ -18,6 +18,8 @@ type Server interface {
 
 type HTTPServer struct {
 	*router
+	// 中间件组成的链
+	middlewareChain []Middleware
 }
 
 func NewHTTPServer() *HTTPServer {
@@ -32,7 +34,12 @@ func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request
 		Resp: writer,
 	}
 
-	h.serve(ctx)
+	root := h.serve
+	for i := len(h.middlewareChain) - 1; i >= 0; i-- {
+		root = h.middlewareChain[i](root)
+	}
+
+	root(ctx)
 }
 
 func (h *HTTPServer) serve(ctx *Context) {
