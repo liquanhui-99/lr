@@ -236,32 +236,34 @@ func TestFindPath(t *testing.T) {
 		path      string
 		method    string
 		wantFound bool
-		wantNode  *node
+		wantNode  *matchInfo
 	}{
 		{
 			name:      "GET root",
 			path:      "/",
 			method:    http.MethodGet,
 			wantFound: true,
-			wantNode: &node{
-				path:    "/",
-				handler: mockHandler,
-				children: map[string]*node{
-					"user": {
-						path: "user",
-						children: map[string]*node{
-							"profile": {
-								path:     "profile",
-								children: map[string]*node{},
-								handler:  mockHandler,
-							},
-							"signUp": {
-								path:     "signUp",
-								children: map[string]*node{},
-								handler:  mockHandler,
-								paramChild: &node{
-									path:    ":id",
-									handler: mockHandler,
+			wantNode: &matchInfo{
+				n: &node{
+					path:    "/",
+					handler: mockHandler,
+					children: map[string]*node{
+						"user": {
+							path: "user",
+							children: map[string]*node{
+								"profile": {
+									path:     "profile",
+									children: map[string]*node{},
+									handler:  mockHandler,
+								},
+								"signUp": {
+									path:     "signUp",
+									children: map[string]*node{},
+									handler:  mockHandler,
+									paramChild: &node{
+										path:    ":id",
+										handler: mockHandler,
+									},
 								},
 							},
 						},
@@ -280,10 +282,12 @@ func TestFindPath(t *testing.T) {
 			path:      "/user/signUp",
 			method:    http.MethodPost,
 			wantFound: true,
-			wantNode: &node{
-				path:     "signUp",
-				children: map[string]*node{},
-				handler:  mockHandler,
+			wantNode: &matchInfo{
+				n: &node{
+					path:     "signUp",
+					children: map[string]*node{},
+					handler:  mockHandler,
+				},
 			},
 		},
 		{
@@ -291,20 +295,27 @@ func TestFindPath(t *testing.T) {
 			path:      "/user/profile",
 			method:    http.MethodGet,
 			wantFound: true,
-			wantNode: &node{
-				path:     "profile",
-				children: map[string]*node{},
-				handler:  mockHandler,
+			wantNode: &matchInfo{
+				n: &node{
+					path:     "profile",
+					children: map[string]*node{},
+					handler:  mockHandler,
+				},
 			},
 		},
 		{
 			name:      "参数路径",
-			path:      "/user/signUp/:id",
+			path:      "/user/signUp/:1234455345345345",
 			method:    http.MethodGet,
 			wantFound: true,
-			wantNode: &node{
-				path:    ":id",
-				handler: mockHandler,
+			wantNode: &matchInfo{
+				n: &node{
+					path:    ":id",
+					handler: mockHandler,
+				},
+				pathParams: map[string]string{
+					"id": "1234455345345345",
+				},
 			},
 		},
 	}
@@ -317,15 +328,16 @@ func TestFindPath(t *testing.T) {
 				return
 			}
 			assert.Equal(t, ok, tc.wantFound)
-			assert.Equal(t, n.path, tc.wantNode.path)
-			msg, ok := n.equal(tc.wantNode)
+			assert.Equal(t, n.n.path, tc.wantNode.n.path)
+			msg, ok := n.n.equal(tc.wantNode.n)
 			if !ok {
 				t.Log(msg)
 				return
 			}
-			nHandler := reflect.ValueOf(n.handler)
-			wHandler := reflect.ValueOf(tc.wantNode.handler)
+			nHandler := reflect.ValueOf(n.n.handler)
+			wHandler := reflect.ValueOf(tc.wantNode.n.handler)
 			assert.True(t, nHandler == wHandler)
+			t.Log(n.pathParams)
 		})
 	}
 }

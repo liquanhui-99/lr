@@ -89,7 +89,7 @@ func (r *router) addRouter(method, path string, handler HandleFunc) {
 }
 
 // findRouter 匹配路由
-func (r *router) findRouter(method, path string) (*node, bool) {
+func (r *router) findRouter(method, path string) (*matchInfo, bool) {
 	root, ok := r.trees[method]
 	if !ok {
 		return nil, false
@@ -97,16 +97,28 @@ func (r *router) findRouter(method, path string) (*node, bool) {
 
 	// 根节点需要单独处理
 	if path == "/" {
-		return root, true
+		return &matchInfo{
+			n: root,
+		}, true
 	}
 
 	path = strings.Trim(path, "/")
 	segments := strings.Split(path, "/")
+	var params map[string]string
 	for _, seg := range segments {
-		child, ok := root.matchChildOf(seg)
+		child, isParam, ok := root.matchChildOf(seg)
 		if !ok {
 			return nil, false
 		}
+
+		if isParam {
+			// 是路径参数
+			if params == nil {
+				params = make(map[string]string, 4)
+			}
+			params[child.path[1:]] = seg[1:]
+		}
+
 		root = child
 	}
 
@@ -115,29 +127,35 @@ func (r *router) findRouter(method, path string) (*node, bool) {
 	}
 
 	// 返回节点和true，调用者知道有这个节点，但是节点的handler是不是目标handler需要自己判断
-	return root, true
+	return &matchInfo{
+		n:          root,
+		pathParams: params,
+	}, true
 }
 
 // matchChildOf 优先匹配静态路径，然后再匹配参数路径
-func (n *node) matchChildOf(seg string) (*node, bool) {
+// @return *node 匹配的信息
+// @return bool 是否是路径参数
+// @return bool 是否匹配到
+func (n *node) matchChildOf(seg string) (*node, bool, bool) {
 	if n.children == nil {
 		if n.paramChild != nil {
-			return n.paramChild, true
+			return n.paramChild, true, true
 		}
 
-		return nil, false
+		return nil, false, false
 	}
 
 	child, ok := n.children[seg]
 	if !ok {
 		// 匹配路径参数
 		if n.paramChild != nil {
-			return n.paramChild, true
+			return n.paramChild, true, true
 		}
 
-		return nil, false
+		return nil, false, false
 	}
-	return child, ok
+	return child, false, ok
 }
 
 func (n *node) childOf(seg string) *node {
@@ -163,4 +181,11 @@ func (n *node) childOf(seg string) *node {
 	}
 
 	return nd
+}
+
+type matchInfo struct {
+	// 节点数据
+	n *node
+	// 参数路径数据
+	pathParams map[string]string
 }
