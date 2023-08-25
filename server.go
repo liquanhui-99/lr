@@ -64,6 +64,11 @@ func (h *HTTPServer) DELETE(path string, handler HandleFunc) {
 	h.router.addRouter(http.MethodDelete, path, handler)
 }
 
+// OPTIONS 注册DELETE方法
+func (h *HTTPServer) OPTIONS(path string, handler HandleFunc) {
+	h.router.addRouter(http.MethodOptions, path, handler)
+}
+
 // ServerHTTP 处理请求的入口方法
 func (h *HTTPServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	ctx := &Context{
