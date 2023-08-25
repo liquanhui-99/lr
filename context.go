@@ -7,4 +7,6 @@ type Context struct {
 	Req *http.Request
 	// Resp 返回响应
 	Resp http.ResponseWriter
+	// 路径参数
+	pathParams map[string]string
 }

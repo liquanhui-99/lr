@@ -21,7 +21,7 @@ func TestRouter_AddRouter(t *testing.T) {
 		},
 	}
 
-	var mockHanlerFunc HandleFunc = func(ctx Context) {}
+	var mockHanlerFunc HandleFunc = func(ctx *Context) {}
 	wantTrees := &router{
 		trees: map[string]*node{
 			http.MethodPost: {
@@ -42,7 +42,7 @@ func TestRouter_AddRouter(t *testing.T) {
 		},
 	}
 
-	r := NewRouter()
+	r := newRouter()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			r.addRouter(tc.method, tc.path, mockHanlerFunc)
@@ -114,8 +114,8 @@ func (n *node) equal(dst *node) (string, bool) {
 
 // TestPanic_EmptyPath 测试空路径
 func TestPanic_EmptyPath(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
-	r := NewRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	r := newRouter()
 
 	assert.Panics(t, func() {
 		r.addRouter(http.MethodPost, "", mockHandler)
@@ -124,8 +124,8 @@ func TestPanic_EmptyPath(t *testing.T) {
 
 // TestPanic_Prefix 测试不以/开头
 func TestPanic_Prefix(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
-	r := NewRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	r := newRouter()
 
 	assert.Panics(t, func() {
 		r.addRouter(http.MethodPost, "user/profile", mockHandler)
@@ -134,8 +134,8 @@ func TestPanic_Prefix(t *testing.T) {
 
 // TestPanic_Suffix 测试不以/结尾
 func TestPanic_Suffix(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
-	r := NewRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	r := newRouter()
 
 	assert.Panics(t, func() {
 		r.addRouter(http.MethodPost, "/user/profile/", mockHandler)
@@ -148,8 +148,8 @@ func TestPanic_Suffix(t *testing.T) {
 
 // TestPanic_DoubleSlash 测试不能包含连续的斜杠
 func TestPanic_DoubleSlash(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
-	r := NewRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	r := newRouter()
 
 	assert.Panics(t, func() {
 		r.addRouter(http.MethodGet, "/user//profile", mockHandler)
@@ -166,8 +166,8 @@ func TestPanic_DoubleSlash(t *testing.T) {
 
 // TestPanic_DuplicateRootPath 根节点重复注册
 func TestPanic_DuplicateRootPath(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
-	r := NewRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	r := newRouter()
 	r.addRouter(http.MethodPost, "/", mockHandler)
 	assert.Panics(t, func() {
 		r.addRouter(http.MethodPost, "/", mockHandler)
@@ -176,8 +176,8 @@ func TestPanic_DuplicateRootPath(t *testing.T) {
 
 // TestPanic_DuplicatePath 普通路径的重复注册
 func TestPanic_DuplicatePath(t *testing.T) {
-	var mockHandler HandleFunc = func(ctx Context) {}
-	r := NewRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
+	r := newRouter()
 	r.addRouter(http.MethodPost, "/user/signIn", mockHandler)
 	assert.Panics(t, func() {
 		r.addRouter(http.MethodPost, "/user/signIn", mockHandler)
@@ -210,10 +210,20 @@ func TestFindPath(t *testing.T) {
 			path:   "/user/signUp",
 			method: http.MethodPost,
 		},
+		{
+			name:   "GET",
+			path:   "/user/signUp/:id",
+			method: http.MethodGet,
+		},
+		{
+			name:   "GET",
+			path:   "/user/signUp",
+			method: http.MethodGet,
+		},
 	}
 
-	r := NewRouter()
-	var mockHandler HandleFunc = func(ctx Context) {}
+	r := newRouter()
+	var mockHandler HandleFunc = func(ctx *Context) {}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -226,24 +236,35 @@ func TestFindPath(t *testing.T) {
 		path      string
 		method    string
 		wantFound bool
-		wantNode  *node
+		wantNode  *matchInfo
 	}{
 		{
 			name:      "GET root",
 			path:      "/",
 			method:    http.MethodGet,
 			wantFound: true,
-			wantNode: &node{
-				path:    "/",
-				handler: mockHandler,
-				children: map[string]*node{
-					"user": {
-						path: "user",
-						children: map[string]*node{
-							"profile": {
-								path:     "profile",
-								children: map[string]*node{},
-								handler:  mockHandler,
+			wantNode: &matchInfo{
+				n: &node{
+					path:    "/",
+					handler: mockHandler,
+					children: map[string]*node{
+						"user": {
+							path: "user",
+							children: map[string]*node{
+								"profile": {
+									path:     "profile",
+									children: map[string]*node{},
+									handler:  mockHandler,
+								},
+								"signUp": {
+									path:     "signUp",
+									children: map[string]*node{},
+									handler:  mockHandler,
+									paramChild: &node{
+										path:    ":id",
+										handler: mockHandler,
+									},
+								},
 							},
 						},
 					},
@@ -261,10 +282,12 @@ func TestFindPath(t *testing.T) {
 			path:      "/user/signUp",
 			method:    http.MethodPost,
 			wantFound: true,
-			wantNode: &node{
-				path:     "signUp",
-				children: map[string]*node{},
-				handler:  mockHandler,
+			wantNode: &matchInfo{
+				n: &node{
+					path:     "signUp",
+					children: map[string]*node{},
+					handler:  mockHandler,
+				},
 			},
 		},
 		{
@@ -272,10 +295,27 @@ func TestFindPath(t *testing.T) {
 			path:      "/user/profile",
 			method:    http.MethodGet,
 			wantFound: true,
-			wantNode: &node{
-				path:     "profile",
-				children: map[string]*node{},
-				handler:  mockHandler,
+			wantNode: &matchInfo{
+				n: &node{
+					path:     "profile",
+					children: map[string]*node{},
+					handler:  mockHandler,
+				},
+			},
+		},
+		{
+			name:      "参数路径",
+			path:      "/user/signUp/:1234455345345345",
+			method:    http.MethodGet,
+			wantFound: true,
+			wantNode: &matchInfo{
+				n: &node{
+					path:    ":id",
+					handler: mockHandler,
+				},
+				pathParams: map[string]string{
+					"id": "1234455345345345",
+				},
 			},
 		},
 	}
@@ -288,15 +328,16 @@ func TestFindPath(t *testing.T) {
 				return
 			}
 			assert.Equal(t, ok, tc.wantFound)
-			assert.Equal(t, n.path, tc.wantNode.path)
-			msg, ok := n.equal(tc.wantNode)
+			assert.Equal(t, n.n.path, tc.wantNode.n.path)
+			msg, ok := n.n.equal(tc.wantNode.n)
 			if !ok {
 				t.Log(msg)
 				return
 			}
-			nHandler := reflect.ValueOf(n.handler)
-			wHandler := reflect.ValueOf(tc.wantNode.handler)
+			nHandler := reflect.ValueOf(n.n.handler)
+			wHandler := reflect.ValueOf(tc.wantNode.n.handler)
 			assert.True(t, nHandler == wHandler)
+			t.Log(n.pathParams)
 		})
 	}
 }
