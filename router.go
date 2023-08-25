@@ -5,24 +5,29 @@ import (
 	"strings"
 )
 
-type HandleFunc func(Context)
+type HandleFunc func(*Context)
 
-// router 路由森林，不是单颗树，key是请求的方法，value是单个树，树上有各个路由节点
+// router 路由森林，不是单颗树，key是请求的方法，value是单颗树，树上有各个路由节点
 type router struct {
 	trees map[string]*node
 }
 
 type node struct {
-	// 请求的路径
+	// 请求的路径(静态路径)
 	path string
-	// 自路由，key是下一个子路径(例如：路径/user/signIn，user是当前的path，signIn是children中的key)
+
+	// 路径参数
+	paramChild *node
+
+	// 子路由，key是下一个子路径(例如：路径/user/signIn，user是当前的path，signIn是children中的key)
 	// value是node的节点，每一个路径都会有自己的节点信息
 	children map[string]*node
+
 	// 处理具体的业务逻辑
 	handler HandleFunc
 }
 
-func NewRouter() *router {
+func newRouter() *router {
 	return &router{
 		trees: map[string]*node{},
 	}
@@ -113,16 +118,37 @@ func (r *router) findRouter(method, path string) (*node, bool) {
 	return root, true
 }
 
+// matchChildOf 优先匹配静态路径，然后再匹配参数路径
 func (n *node) matchChildOf(seg string) (*node, bool) {
 	if n.children == nil {
+		if n.paramChild != nil {
+			return n.paramChild, true
+		}
+
 		return nil, false
 	}
 
 	child, ok := n.children[seg]
+	if !ok {
+		// 匹配路径参数
+		if n.paramChild != nil {
+			return n.paramChild, true
+		}
+
+		return nil, false
+	}
 	return child, ok
 }
 
 func (n *node) childOf(seg string) *node {
+	if seg[0] == ':' {
+		// 这一段是参数路径
+		n.paramChild = &node{
+			path: seg,
+		}
+		return n.paramChild
+	}
+
 	if n.children == nil {
 		n.children = make(map[string]*node)
 	}

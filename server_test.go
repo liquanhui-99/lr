@@ -13,7 +13,7 @@ func TestServer(t *testing.T) {
 	//}
 
 	h := NewHTTPServer("tcp", ":8080")
-	h.GET("/user/profile", func(ctx Context) {
+	h.GET("/user/profile", func(ctx *Context) {
 		fmt.Println("这是一个测试程序")
 	})
 	if err := h.Server(); err != nil {

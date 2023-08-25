@@ -35,7 +35,7 @@ func NewHTTPServer(network, addr string) *HTTPServer {
 	return &HTTPServer{
 		addr:    addr,
 		network: network,
-		router:  NewRouter(),
+		router:  newRouter(),
 	}
 }
 
@@ -81,7 +81,15 @@ func (h *HTTPServer) ServeHTTP(response http.ResponseWriter, request *http.Reque
 
 // serve 需要先查询路由树，执行命中的逻辑
 func (h *HTTPServer) serve(ctx *Context) {
+	n, ok := h.router.findRouter(ctx.Req.Method, ctx.Req.URL.Path)
+	if !ok || n.handler == nil {
+		// 不存在路径或者路径查到但是没有handler
+		ctx.Resp.WriteHeader(http.StatusNotFound)
+		_, _ = ctx.Resp.Write([]byte("NOT FOUND"))
+		return
+	}
 
+	n.handler(ctx)
 }
 
 // Server 启动程序
