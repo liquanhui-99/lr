@@ -2,6 +2,7 @@ package lr
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"net/http"
 	"net/url"
@@ -17,6 +18,8 @@ type Context struct {
 	pathParams map[string]string
 	// Query参数的缓存(?)
 	queryCache url.Values
+	// 匹配到的路径
+	matchedPath string
 }
 
 func (c *Context) RespJsonOK(val any) error {
@@ -33,6 +36,10 @@ func (c *Context) respJson(val any, status int) error {
 		return err
 	}
 
+	c.Resp.Header().Set("Content-Type", "application/json")
+	c.Resp.Header().Set("Content-Length", strconv.Itoa(len(bytes)))
+
+	// 先写入响应内容
 	n, err := c.Resp.Write(bytes)
 	if err != nil {
 		return err
@@ -41,10 +48,8 @@ func (c *Context) respJson(val any, status int) error {
 		return errors.New("未写入全部数据")
 	}
 
-	c.Resp.Header().Set("Content-Type", "application/json")
-	c.Resp.Header().Set("Content-Length", strconv.Itoa(len(bytes)))
+	// 在写入响应内容后调用WriteHeader
 	c.Resp.WriteHeader(status)
-
 	return nil
 }
 
@@ -62,6 +67,15 @@ func (c *Context) BindJson(val any) error {
 	return decode.Decode(&val)
 }
 
+func (c *Context) BindXML(val any) error {
+	if val == nil {
+		return errors.New("输入不能为nil")
+	}
+
+	decode := xml.NewDecoder(c.Req.Body)
+	return decode.Decode(&val)
+}
+
 // FormValue 获取表单中指定key的内容，多次调用ParseForm()，只会解析一次，不会每次都解析
 func (c *Context) FormValue(key string) StringValue {
 	if err := c.Req.ParseForm(); err != nil {
@@ -74,6 +88,11 @@ func (c *Context) FormValue(key string) StringValue {
 		val: c.Req.FormValue(key),
 		err: nil,
 	}
+}
+
+// MatchedPath 获取请求最终匹配到的路径
+func (c *Context) MatchedPath() string {
+	return c.matchedPath
 }
 
 // QueryValue 根据key获取Query中的值

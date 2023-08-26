@@ -13,7 +13,9 @@ type router struct {
 }
 
 type node struct {
-	// 请求的路径(静态路径)
+	// 完整的路径，例如：/user/profile  fullPath就是/user/profile
+	fullPath string
+	// 当前请求的路径(静态路径)，例如： /user/profile path就是profile
 	path string
 
 	// 路径参数
@@ -97,6 +99,7 @@ func (r *router) findRouter(method, path string) (*matchInfo, bool) {
 
 	// 根节点需要单独处理
 	if path == "/" {
+		root.fullPath = path
 		return &matchInfo{
 			n: root,
 		}, true
@@ -127,6 +130,7 @@ func (r *router) findRouter(method, path string) (*matchInfo, bool) {
 	}
 
 	// 返回节点和true，调用者知道有这个节点，但是节点的handler是不是目标handler需要自己判断
+	root.fullPath = path
 	return &matchInfo{
 		n:          root,
 		pathParams: params,
