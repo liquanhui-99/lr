@@ -24,18 +24,35 @@ type HTTPServer struct {
 	network string
 	// 组合路由
 	*router
+	// server层面上的Middleware
+	mdls []Middleware
 }
+
+type HTTPServerOptions func(server *HTTPServer)
 
 func (h *HTTPServer) AddRoute(method, path string, handler HandleFunc) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func NewHTTPServer(network, addr string) *HTTPServer {
-	return &HTTPServer{
+func NewHTTPServer(network, addr string, opts ...HTTPServerOptions) *HTTPServer {
+	s := &HTTPServer{
 		addr:    addr,
 		network: network,
 		router:  newRouter(),
+	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
+}
+
+// Use 传入中间件
+func Use(mdls ...Middleware) HTTPServerOptions {
+	return func(s *HTTPServer) {
+		s.mdls = mdls
 	}
 }
 
@@ -76,7 +93,13 @@ func (h *HTTPServer) ServeHTTP(response http.ResponseWriter, request *http.Reque
 		Resp: response,
 	}
 
-	h.serve(ctx)
+	// 中间件的处理逻辑，从后往前的方式挂载
+	root := h.serve
+	for i := len(h.mdls) - 1; i >= 0; i-- {
+		root = h.mdls[i](root)
+	}
+
+	root(ctx)
 }
 
 // serve 需要先查询路由树，执行命中的逻辑
@@ -89,6 +112,7 @@ func (h *HTTPServer) serve(ctx *Context) {
 		return
 	}
 
+	ctx.matchedPath = res.n.fullPath
 	ctx.pathParams = res.pathParams
 	res.n.handler(ctx)
 }
