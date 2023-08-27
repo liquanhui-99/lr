@@ -1,6 +1,7 @@
 package lr
 
 import (
+	"log"
 	"net"
 	"net/http"
 )
@@ -99,7 +100,29 @@ func (h *HTTPServer) ServeHTTP(response http.ResponseWriter, request *http.Reque
 		root = h.mdls[i](root)
 	}
 
+	var m Middleware = func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+			next(ctx)
+			// 在这里设置响应状态码和响应的数据信息
+			h.flushResp(ctx)
+		}
+	}
+	root = m(root)
+
 	root(ctx)
+}
+
+func (h *HTTPServer) flushResp(ctx *Context) {
+	if ctx.Status != 0 {
+		ctx.Resp.WriteHeader(ctx.Status)
+	}
+
+	if len(ctx.RespData) != 0 {
+		n, err := ctx.Resp.Write(ctx.RespData)
+		if err != nil || n != len(ctx.RespData) {
+			log.Fatalf("写入响应失败 %v", err)
+		}
+	}
 }
 
 // serve 需要先查询路由树，执行命中的逻辑
@@ -107,6 +130,7 @@ func (h *HTTPServer) serve(ctx *Context) {
 	res, ok := h.router.findRouter(ctx.Req.Method, ctx.Req.URL.Path)
 	if !ok || res.n.handler == nil {
 		// 不存在路径或者路径查到但是没有handler
+		ctx.Status = http.StatusNotFound
 		ctx.Resp.WriteHeader(http.StatusNotFound)
 		_, _ = ctx.Resp.Write([]byte("NOT FOUND"))
 		return
