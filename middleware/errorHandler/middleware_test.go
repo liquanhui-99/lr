@@ -7,26 +7,18 @@ import (
 )
 
 func TestMiddlewareBuilder(t *testing.T) {
-	builder := NewMiddlewareBuilder().AddCode(http.StatusNotFound, []byte(`
-<html>
-	<body>
-		<h1>404 页面走丢了</h1>
-	</body>
-</html>
-`)).AddCode(http.StatusBadRequest, []byte(`
-<html>
-	<body>
-		<h1>401 参数错误</h1>
-	</body>
-</html>
-`))
+	builder := NewMiddlewareBuilder().
+		AddCode(http.StatusNotFound).
+		AddCode(http.StatusInternalServerError)
 	h := lr.NewHTTPServer("tcp", ":8084", lr.Use(builder.Build()))
 	h.GET("/user", func(ctx *lr.Context) {
 		ctx.Status = http.StatusNotFound
 	})
+
 	h.GET("/user/profile", func(ctx *lr.Context) {
-		ctx.Status = http.StatusBadRequest
+		ctx.Status = http.StatusInternalServerError
 	})
+
 	if err := h.Server(); err != nil {
 		panic(err)
 	}
