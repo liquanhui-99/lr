@@ -24,6 +24,8 @@ type Context struct {
 	Status int
 	// 请求响应的数据
 	RespData []byte
+	// 模版渲染引擎
+	TplEngine TemplateEngine
 }
 
 func (c *Context) RespJsonOK(val any) error {
@@ -209,4 +211,20 @@ func (s StringValue) Float64() (float64, error) {
 	}
 
 	return strconv.ParseFloat(s.val, 32)
+}
+
+// Render 模版渲染的方法
+// @param  tplName 模版名称
+// @param data需要被模版渲染的数据
+// @return []byte 模版渲染后的数据
+func (c *Context) Render(tplName string, data any) error {
+	var err error
+	c.RespData, err = c.TplEngine.Render(c.Req.Context(), tplName, data)
+	if err != nil {
+		c.Status = http.StatusInternalServerError
+		return err
+	}
+	c.Status = http.StatusOK
+
+	return nil
 }
