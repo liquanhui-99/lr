@@ -20,6 +20,10 @@ type Context struct {
 	queryCache url.Values
 	// 匹配到的路径
 	matchedPath string
+	// 响应状态码
+	Status int
+	// 请求响应的数据
+	RespData []byte
 }
 
 func (c *Context) RespJsonOK(val any) error {
@@ -36,20 +40,12 @@ func (c *Context) respJson(val any, status int) error {
 		return err
 	}
 
+	c.RespData = bytes
+
 	c.Resp.Header().Set("Content-Type", "application/json")
 	c.Resp.Header().Set("Content-Length", strconv.Itoa(len(bytes)))
+	c.Status = status
 
-	// 先写入响应内容
-	n, err := c.Resp.Write(bytes)
-	if err != nil {
-		return err
-	}
-	if len(bytes) != n {
-		return errors.New("未写入全部数据")
-	}
-
-	// 在写入响应内容后调用WriteHeader
-	c.Resp.WriteHeader(status)
 	return nil
 }
 
