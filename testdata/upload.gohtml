@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>上传文件</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f1f1f1;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .btn {
+            border: none;
+            color: #fff;
+            background-color: #4CAF50;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+        }
+
+        .file-name {
+            text-align: center;
+            margin-top: 10px;
+            color: #555;
+        }
+
+        .submit-btn {
+            display: block;
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>上传文件</h1>
+    <div class="upload-btn-wrapper">
+        <button class="btn">选择文件</button>
+        <input type="file" name={{.Name}} />
+        <span class="file-name"></span>
+    </div>
+    <button class="submit-btn" onclick="uploadFile()">上传</button>
+</div>
+
+<script>
+    document.querySelector('input[type=file]').addEventListener('change', function (e) {
+        var fileName = document.querySelector('.file-name');
+        fileName.textContent = this.files[0].name;
+    });
+    function uploadFile() {
+        var fileInput = document.querySelector('input[type=file]');
+        var nameValue = document.querySelector("input[type=file]").name;
+        var file = fileInput.files[0];
+        var formData = new FormData();
+        formData.append("{{.Name}}", file); // 替换"myfile"为占位符
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://127.0.0.1:8081/upload", true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // 上传成功后的处理操作
+                console.log("文件上传成功！");
+            }
+        };
+        xhr.send(formData);
+    }
+</script>
+</body>
+</html>
