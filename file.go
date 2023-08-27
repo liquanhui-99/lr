@@ -5,8 +5,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
+// FileUploader 文件上传功能实现
 type FileUploader struct {
 	// 上传文件的字段名
 	FileField string
@@ -42,5 +45,48 @@ func (f *FileUploader) Handler() HandleFunc {
 
 		ctx.Status = http.StatusOK
 		ctx.RespData = []byte("上传成功")
+	}
+}
+
+// FileDownloader 文件下载功能实现
+type FileDownloader struct {
+	Dir string
+}
+
+func (f FileDownloader) Handle() HandleFunc {
+	return func(ctx *Context) {
+		res := ctx.QueryValue("file")
+		if res.err != nil {
+			ctx.Status = 400
+			ctx.RespData = []byte("找不到目标文件")
+			return
+		}
+		// 全路径
+		req := filepath.Clean(res.val)
+		dest := filepath.Join(f.Dir, req)
+		// 这里做路径校验，防止攻击者发送相对路径导致下载其他的内部文件
+		dest, err := filepath.Abs(dest)
+		if err != nil {
+			ctx.Status = 400
+			ctx.RespData = []byte("找不到目标文件")
+			return
+		}
+		if !strings.Contains(dest, f.Dir) {
+			ctx.Status = 400
+			ctx.RespData = []byte("找不到目标文件")
+			return
+		}
+		// 文件名
+		fileName := filepath.Base(dest)
+
+		header := ctx.Resp.Header()
+		header.Set("Content-Disposition", "attachment;filename="+fileName)
+		header.Set("Content-Description", "File Transfer")
+		header.Set("Content-Type", "application/octet-stream")
+		header.Set("Content-Transfer-Encoding", "binary")
+		header.Set("Expires", "0")
+		header.Set("Cache-Control", "must-revalidate")
+		header.Set("Pragma", "public")
+		http.ServeFile(ctx.Resp, ctx.Req, dest)
 	}
 }

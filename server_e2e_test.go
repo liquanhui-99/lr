@@ -61,6 +61,11 @@ func TestFileUpload(t *testing.T) {
 	}
 	h.POST("/upload", hd.Handler())
 
+	fd := FileDownloader{
+		Dir: filepath.Join("testdata", "download"),
+	}
+	h.GET("/download", fd.Handle())
+
 	if err := h.Server(); err != nil {
 		panic(err)
 	}
