@@ -52,6 +52,10 @@ func (s *Store) Refresh(ctx context.Context, id string) error {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	sess, ok = s.sessions.Get(id)
+	if ok {
+		return nil
+	}
 	s.sessions.Set(id, sess, s.expiration)
 	return nil
 }
